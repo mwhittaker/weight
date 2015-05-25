@@ -11,7 +11,7 @@ Options:
 """
 
 from docopt import docopt
-import datetime
+from datetime import datetime
 import sys
 import time
 import os.path
@@ -32,7 +32,10 @@ def err(s):
 
 def datetime_to_epoch(time):
     # http://stackoverflow.com/a/11743262/3187068
-    return (time - datetime.datetime(1970, 1, 1)).total_seconds()
+    return (time - datetime(1970, 1, 1)).total_seconds()
+
+def epoch_to_datetime(seconds):
+    return datetime.fromtimestamp(seconds)
 
 def parse_float(s):
     try:
@@ -42,7 +45,7 @@ def parse_float(s):
 
 def parse_time(s):
     try:
-        return datetime.datetime.strptime(s, TIME_FORMAT)
+        return datetime.strptime(s, TIME_FORMAT)
     except ValueError:
         err("{} is not a time formatted like 2015-07-15-13:34.".format(s))
 
@@ -51,8 +54,13 @@ def parse_weights(filename):
         return []
 
     with open(filename, "r") as f:
-        return [(int(line.split()[0]), float(line.split()[1])) for line in f]
-
+        weights = []
+        for line in f:
+            parts  = line.split()
+            time   = int(parts[0])
+            weight = float(parts[1])
+            weights.append((time, weight))
+        return weights
 
 def record_weight(time, weight):
     weights = parse_weights(WEIGHT_FILE)
@@ -74,7 +82,14 @@ def generate_javascript():
                     text: 'Weight Loss'
                 }},
                 xAxis: {{
-                    categories: [{}]
+                    type: 'datetime',
+                    dateTimeLabelFormats: {{ // don't display the dummy year
+                        month: '%e. %b',
+                        year: '%b'
+                    }},
+                    title: {{
+                        text: 'Date'
+                    }}
                 }},
                 yAxis: {{
                     title: {{
@@ -86,10 +101,14 @@ def generate_javascript():
                         dataLabels: {{
                             enabled: true
                         }},
-                        enableMouseTracking: false
+                        enableMouseTracking: true,
+                        marker: {{
+                            enabled: true
+                        }}
                     }}
                 }},
                 series: [{{
+                    name: 'michael',
                     data: [{}]
                 }}]
             }});
@@ -97,13 +116,16 @@ def generate_javascript():
     """
 
     timeweights = parse_weights(WEIGHT_FILE)
+
     times   = [timeweight[0] for timeweight in timeweights]
+    times   = [epoch_to_datetime(time) for time in times]
+    times   = ["Date.UTC({}, {}, {}, {}, {})".format(time.year, time.month, time.day, time.hour, time.minute) for time in times]
+
     weights = [timeweight[1] for timeweight in timeweights]
-    times   = ["'{}'".format(datetime.datetime.fromtimestamp(time).strftime("%b %d, %Y %X")) for time in times]
     weights = ["{}".format(weight) for weight in weights]
 
     with open(JAVASCRIPT_FILE, "w") as f:
-        f.write(template.format(", ".join(times), ", ".join(weights)))
+        f.write(template.format(", ".join("[{}, {}]".format(time, weight) for (time, weight) in zip (times, weights))))
 
 def main(args):
     arg_weight     = args["<weight>"]
@@ -120,6 +142,7 @@ def main(args):
         else:
             t = int(datetime_to_epoch(parse_time(arg_time)))
             record_weight(t, parse_float(arg_weight))
+        generate_javascript()
     elif arg_javascript:
         generate_javascript()
     elif arg_now:

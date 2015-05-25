@@ -8,7 +8,14 @@
                     text: 'Weight Loss'
                 },
                 xAxis: {
-                    categories: ['May 24, 2015 22:55:04', 'May 24, 2015 22:55:38', 'May 24, 2015 22:55:40', 'May 24, 2015 22:58:58', 'May 24, 2015 23:07:05']
+                    type: 'datetime',
+                    dateTimeLabelFormats: { // don't display the dummy year
+                        month: '%e. %b',
+                        year: '%b'
+                    },
+                    title: {
+                        text: 'Date'
+                    }
                 },
                 yAxis: {
                     title: {
@@ -20,11 +27,15 @@
                         dataLabels: {
                             enabled: true
                         },
-                        enableMouseTracking: false
+                        enableMouseTracking: true,
+                        marker: {
+                            enabled: true
+                        }
                     }
                 },
                 series: [{
-                    data: [120.0, 120.0, 120.0, 120.0, 120.0]
+                    name: 'michael',
+                    data: [[Date.UTC(2015, 5, 24, 23, 45), 215.8]]
                 }]
             });
         });
